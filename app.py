@@ -6,7 +6,7 @@ import re
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, time as dt_time
+from datetime import UTC, datetime, timedelta, time as dt_time
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import urlparse
@@ -22,6 +22,11 @@ MAX_ATTEMPTS = 5
 DEFAULT_RETRY_MINUTES = 30
 WORKER_INTERVAL_SECONDS = 20
 MOSCOW_OFFSET = timedelta(hours=3)
+
+
+def utc_now() -> datetime:
+    """Возвращает текущее UTC-время без tzinfo для совместимости с существующей схемой БД."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LinkExtractor(HTMLParser):
@@ -128,7 +133,7 @@ def parse_time(value: str) -> dt_time:
 
 
 def to_moscow_now() -> datetime:
-    return datetime.utcnow() + MOSCOW_OFFSET
+    return utc_now() + MOSCOW_OFFSET
 
 
 def moscow_to_utc(naive_moscow_dt: datetime) -> datetime:
@@ -159,11 +164,11 @@ def calculate_next_slot(channel: Channel) -> tuple[datetime, int]:
         )
         slot_index = int(day_count)
         candidate = planned_utc + timedelta(seconds=slot_index)
-        if candidate > datetime.utcnow():
+        if candidate > utc_now():
             return candidate, slot_index
         planned_utc += timedelta(days=1)
 
-    return datetime.utcnow() + timedelta(minutes=1), 0
+    return utc_now() + timedelta(minutes=1), 0
 
 
 def adjust_to_window(channel: Channel, planned_utc: datetime) -> datetime:
@@ -346,7 +351,7 @@ def run_scheduler(app: Flask) -> None:
     worker_id = f"worker-{os.getpid()}"
     with app.app_context():
         while True:
-            now = datetime.utcnow()
+            now = utc_now()
             due = (
                 Publication.query
                 .filter(Publication.status.in_(["scheduled", "retry"]), Publication.ready_at <= now, Publication.attempts < MAX_ATTEMPTS)
@@ -359,16 +364,16 @@ def run_scheduler(app: Flask) -> None:
                 locked = (
                     Publication.query
                     .filter(Publication.id == pub.id, Publication.status.in_(["scheduled", "retry"]))
-                    .update({"status": "processing", "locked_at": datetime.utcnow(), "locked_by": worker_id})
+                    .update({"status": "processing", "locked_at": utc_now(), "locked_by": worker_id})
                 )
                 db.session.commit()
                 if not locked:
                     continue
 
-                refreshed = Publication.query.get(pub.id)
+                refreshed = db.session.get(Publication, pub.id)
                 if refreshed.telegram_message_id:
                     refreshed.status = "sent"
-                    refreshed.sent_at = datetime.utcnow()
+                    refreshed.sent_at = utc_now()
                     db.session.commit()
                     continue
 
@@ -376,7 +381,7 @@ def run_scheduler(app: Flask) -> None:
                 if result.ok:
                     refreshed.status = "sent"
                     refreshed.telegram_message_id = result.message_id
-                    refreshed.sent_at = datetime.utcnow()
+                    refreshed.sent_at = utc_now()
                     refreshed.last_error = None
                     log_action("publication", refreshed.id, "send", {"message_id": result.message_id})
 
@@ -393,7 +398,7 @@ def run_scheduler(app: Flask) -> None:
                     else:
                         retry_delay = max(DEFAULT_RETRY_MINUTES * 60, int(result.retry_after_seconds or 0))
                         refreshed.status = "retry"
-                        refreshed.ready_at = datetime.utcnow() + timedelta(seconds=retry_delay)
+                        refreshed.ready_at = utc_now() + timedelta(seconds=retry_delay)
                         log_action("publication", refreshed.id, "retry", {"error": result.error, "delay_seconds": retry_delay})
                 db.session.commit()
 
@@ -469,7 +474,7 @@ def create_app() -> Flask:
 
     @app.route("/posts/<int:post_id>/edit", methods=["GET", "POST"])
     def post_edit(post_id: int):
-        post = Post.query.get_or_404(post_id)
+        post = db.get_or_404(Post, post_id)
         channels = Channel.query.order_by(Channel.title.asc()).all()
         if request.method == "POST":
             post.channel_id = int(request.form["channel_id"])
@@ -490,7 +495,7 @@ def create_app() -> Flask:
 
     @app.post("/posts/<int:post_id>/duplicate")
     def post_duplicate(post_id: int):
-        src = Post.query.get_or_404(post_id)
+        src = db.get_or_404(Post, post_id)
         copy_post = Post(
             channel_id=src.channel_id,
             title=f"{src.title} (копия)",
@@ -511,7 +516,7 @@ def create_app() -> Flask:
 
     @app.post("/posts/<int:post_id>/cancel")
     def post_cancel(post_id: int):
-        post = Post.query.get_or_404(post_id)
+        post = db.get_or_404(Post, post_id)
         post.status = "canceled"
         Publication.query.filter(Publication.post_id == post.id, Publication.status.in_(["scheduled", "retry", "processing"])).update({"status": "canceled"})
         log_action("post", post.id, "cancel")
@@ -521,7 +526,7 @@ def create_app() -> Flask:
 
     @app.post("/posts/<int:post_id>/schedule")
     def post_schedule(post_id: int):
-        post = Post.query.get_or_404(post_id)
+        post = db.get_or_404(Post, post_id)
         ok, reason = validate_post(post)
         post.blacklist_check_status = "ok" if ok else "blocked"
         post.blacklist_reason = reason
@@ -556,7 +561,7 @@ def create_app() -> Flask:
 
     @app.post("/publications/<int:pub_id>/reschedule")
     def publication_reschedule(pub_id: int):
-        publication = Publication.query.get_or_404(pub_id)
+        publication = db.get_or_404(Publication, pub_id)
         planned_text = request.form["planned_at"].strip()
         planned_local = datetime.strptime(planned_text, "%Y-%m-%dT%H:%M")
         planned_utc = adjust_to_window(publication.post.channel, moscow_to_utc(planned_local))
@@ -575,9 +580,9 @@ def create_app() -> Flask:
 
     @app.post("/publications/<int:pub_id>/retry-now")
     def publication_retry_now(pub_id: int):
-        publication = Publication.query.get_or_404(pub_id)
+        publication = db.get_or_404(Publication, pub_id)
         publication.status = "retry"
-        publication.ready_at = datetime.utcnow()
+        publication.ready_at = utc_now()
         publication.attempts = 0
         publication.last_error = None
         publication.post.status = "queued"
@@ -631,7 +636,7 @@ def create_app() -> Flask:
             for row in reader:
                 channel = None
                 if row.get("channel_id"):
-                    channel = Channel.query.get(int(row["channel_id"]))
+                    channel = db.session.get(Channel, int(row["channel_id"]))
                 elif row.get("channel_title"):
                     channel = Channel.query.filter_by(title=row["channel_title"]).first()
                 if not channel:
