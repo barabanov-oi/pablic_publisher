@@ -309,17 +309,31 @@ def verify_channel_access(bot_token: str, chat_id: str) -> tuple[bool, str]:
             member_response = tg_request(bot_token, "getChatMember", {"chat_id": chat_id, "user_id": bot_id})
             member_data = member_response.json()
             if member_response.ok and member_data.get("ok"):
-                status = ((member_data.get("result") or {}).get("status") or "").lower()
-                if status in {"creator", "administrator", "member"}:
-                    return True, f"OK: доступ подтверждён ({chat_title})"
-                return False, (
-                    "Бот не может публиковать в этом чате: "
-                    f"статус бота '{status or 'unknown'}'. Добавьте бота в канал и выдайте права на публикацию."
-                )
+                member_info = member_data.get("result") or {}
+                status = (member_info.get("status") or "").lower()
+                chat_type = (chat.get("type") or "").lower()
+
+                # Для каналов бот обязан быть администратором/создателем,
+                # иначе Telegram возвращает Forbidden при отправке.
+                if chat_type == "channel":
+                    if status in {"creator", "administrator"}:
+                        return True, f"OK: доступ подтверждён ({chat_title})"
+                    return False, (
+                        "Для публикации в канале бот должен быть администратором. "
+                        f"Текущий статус: '{status or 'unknown'}'. Выдайте боту права на публикацию."
+                    )
+
+                # Для групп/супергрупп проверяем, что бот не удалён/не вышел.
+                if status in {"left", "kicked", "restricted"}:
+                    return False, (
+                        "Бот не может публиковать в этом чате: "
+                        f"статус '{status}'. Проверьте, что бот добавлен и имеет права на отправку сообщений."
+                    )
+                return True, f"OK: доступ подтверждён ({chat_title})"
 
             member_description = member_data.get("description") or member_response.text or "Unknown error"
             return False, (
-                "Бот не состоит в канале или у него нет доступа к проверке членства. "
+                "Не удалось проверить членство бота в чате. "
                 f"Telegram: {member_description}"
             )
         except requests.RequestException as exc:
@@ -440,8 +454,8 @@ def parse_tg_error(response: requests.Response, data: dict[str, Any]) -> SendRes
         retryable = True
     if "bot is not a member of the channel chat" in error_text.lower():
         error_text = (
-            "Бот не является участником канала. "
-            "Добавьте бота в канал и выдайте право на публикацию, затем повторите отправку."
+            "Telegram отклонил отправку: бот не может писать в этот канал. "
+            "Проверьте chat_id, что бот добавлен именно в целевой канал и назначен администратором с правом публикации."
         )
     return SendResult(ok=False, error=error_text, retry_after_seconds=retry_after, retryable=retryable)
 
