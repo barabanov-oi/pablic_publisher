@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Каналы</h2>
+<form method="post" class="grid-form">
+  <input name="title" placeholder="Название" required />
+  <input name="telegram_chat_id" placeholder="Chat ID" required />
+  <input name="bot_token" placeholder="Bot token" required />
+  <input name="daily_time" placeholder="10:00" value="10:00" required />
+  <input name="allowed_window_start" placeholder="08:00" value="08:00" required />
+  <input name="allowed_window_end" placeholder="22:00" value="22:00" required />
+  <button type="submit">Добавить</button>
+</form>
+<table>
+  <tr><th>ID</th><th>Название</th><th>Chat ID</th><th>Время слота</th><th>Окно</th></tr>
+  {% for c in channels %}
+    <tr>
+      <td>{{ c.id }}</td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.telegram_chat_id }}</td>
+      <td>{{ c.daily_time }}</td>
+      <td>{{ c.allowed_window_start }} - {{ c.allowed_window_end }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

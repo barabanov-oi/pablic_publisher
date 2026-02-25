@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Telegram Publisher</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>Telegram Publisher MVP</h1>
+    <nav>
+      <a href="{{ url_for('index') }}">Главная</a>
+      <a href="{{ url_for('channels') }}">Каналы</a>
+      <a href="{{ url_for('posts') }}">Посты</a>
+      <a href="{{ url_for('publications') }}">Очередь</a>
+      <a href="{{ url_for('reports') }}">Отчёты</a>
+      <a href="{{ url_for('blacklist') }}">Blacklist</a>
+      <a href="{{ url_for('csv_import') }}">CSV импорт</a>
+    </nav>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="flash-list">
+          {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

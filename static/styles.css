@@ -1,0 +1,17 @@
+body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
+header { background: #1f2937; color: #fff; padding: 12px 20px; }
+nav a { color: #fff; margin-right: 12px; text-decoration: none; }
+main { padding: 20px; }
+table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 20px; }
+th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+.grid-form { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.long-form label { display: block; margin-bottom: 12px; }
+input, textarea, select, button { padding: 8px; }
+.inline { display: inline-block; margin: 2px; }
+.flash-list { background: #dcfce7; padding: 10px; list-style: none; }
+.badge { padding: 2px 6px; border-radius: 12px; font-size: 12px; color: #fff; }
+.status-draft { background: #6b7280; }
+.status-scheduled, .status-retry { background: #2563eb; }
+.status-processing, .status-queued { background: #9333ea; }
+.status-sent { background: #16a34a; }
+.status-failed, .status-canceled { background: #dc2626; }

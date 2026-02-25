@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Календарь / Очередь публикаций</h2>
+<table>
+  <tr><th>ID</th><th>Post ID</th><th>planned_at UTC</th><th>ready_at UTC</th><th>Статус</th><th>Попытки</th><th>Ошибка</th><th>Действия</th></tr>
+  {% for p in publications %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.post_id }}</td>
+      <td>{{ p.planned_at }}</td>
+      <td>{{ p.ready_at }}</td>
+      <td><span class="badge status-{{ p.status }}">{{ p.status }}</span></td>
+      <td>{{ p.attempts }}</td>
+      <td>{{ p.last_error or '' }}</td>
+      <td>
+        <form method="post" action="{{ url_for('publication_reschedule', pub_id=p.id) }}" class="inline">
+          <input type="datetime-local" name="planned_at" required>
+          <button>Перепланировать</button>
+        </form>
+        <form method="post" action="{{ url_for('publication_retry_now', pub_id=p.id) }}" class="inline">
+          <button>Переотправить сейчас</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

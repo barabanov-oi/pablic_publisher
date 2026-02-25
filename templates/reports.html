@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Отчёты</h2>
+<h3>План/факт</h3>
+<table>
+  <tr><th>Publication</th><th>Канал</th><th>Пост</th><th>planned_at (MSK)</th><th>sent_at (MSK)</th><th>Задержка (сек)</th><th>Статус</th></tr>
+  {% for publication, post, channel in rows %}
+    <tr>
+      <td>{{ publication.id }}</td>
+      <td>{{ channel.title }}</td>
+      <td>{{ post.title }}</td>
+      <td>{{ utc_to_moscow(publication.planned_at) if publication.planned_at else '' }}</td>
+      <td>{{ utc_to_moscow(publication.sent_at) if publication.sent_at else '' }}</td>
+      <td>
+        {% if publication.sent_at %}
+          {{ (publication.sent_at - publication.planned_at).total_seconds()|int }}
+        {% endif %}
+      </td>
+      <td>{{ publication.status }}</td>
+    </tr>
+  {% endfor %}
+</table>
+<h3>Топ ошибок</h3>
+<table>
+  <tr><th>Ошибка</th><th>Кол-во</th></tr>
+  {% for error, count in error_rows %}
+    <tr><td>{{ error }}</td><td>{{ count }}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

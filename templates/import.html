@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Импорт из CSV</h2>
+<form method="post" enctype="multipart/form-data" class="long-form">
+  <label>Режим
+    <select name="mode">
+      <option value="draft">Создать черновики</option>
+      <option value="scheduled">Сразу запланировать</option>
+    </select>
+  </label>
+  <input type="file" name="file" accept=".csv" required>
+  <button type="submit">Импортировать</button>
+</form>
+<p>Поля CSV: channel_id/channel_title,title,body_html,media_urls,buttons,planned_at</p>
+{% endblock %}

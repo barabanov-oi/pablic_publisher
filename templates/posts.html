@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Посты</h2>
+<p><a href="{{ url_for('post_new') }}">Создать пост</a></p>
+<table>
+  <tr><th>ID</th><th>Канал</th><th>Заголовок</th><th>Статус</th><th>Blacklist</th><th>Действия</th></tr>
+  {% for p in posts %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.channel.title }}</td>
+      <td>{{ p.title }}</td>
+      <td><span class="badge status-{{ p.status }}">{{ p.status }}</span></td>
+      <td>{{ p.blacklist_check_status }}{% if p.blacklist_reason %}: {{ p.blacklist_reason }}{% endif %}</td>
+      <td>
+        <a href="{{ url_for('post_edit', post_id=p.id) }}">Редактировать</a>
+        <form method="post" action="{{ url_for('post_duplicate', post_id=p.id) }}" class="inline"><button>Дублировать</button></form>
+        <form method="post" action="{{ url_for('post_cancel', post_id=p.id) }}" class="inline"><button>Отменить</button></form>
+        <form method="post" action="{{ url_for('post_schedule', post_id=p.id) }}" class="inline">
+          <input type="datetime-local" name="planned_at" />
+          <button>Запланировать</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

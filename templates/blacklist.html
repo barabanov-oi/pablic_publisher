@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Blacklist</h2>
+<form method="post" class="grid-form">
+  <select name="type">
+    <option value="word">word</option>
+    <option value="domain">domain</option>
+    <option value="regex">regex</option>
+  </select>
+  <input name="pattern" placeholder="pattern" required>
+  <label><input type="checkbox" name="is_enabled" checked> Активно</label>
+  <button>Добавить правило</button>
+</form>
+<table>
+  <tr><th>ID</th><th>Тип</th><th>Паттерн</th><th>Активно</th></tr>
+  {% for r in rules %}
+    <tr><td>{{ r.id }}</td><td>{{ r.type }}</td><td>{{ r.pattern }}</td><td>{{ r.is_enabled }}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
