@@ -122,6 +122,7 @@ class SendResult:
     message_id: str | None = None
     error: str | None = None
     retry_after_seconds: int | None = None
+    retryable: bool = True
 
 
 def log_action(entity_type: str, entity_id: int, action: str, meta: dict[str, Any] | None = None) -> None:
@@ -248,6 +249,18 @@ def build_inline_keyboard(buttons: list[dict[str, str]]) -> dict[str, Any] | Non
     return {"inline_keyboard": rows} if rows else None
 
 
+def normalize_media_type(raw_type: str | None) -> str:
+    media_type = (raw_type or "photo").strip().lower()
+    aliases = {
+        "image": "photo",
+        "img": "photo",
+        "gif": "document",
+        "file": "document",
+    }
+    media_type = aliases.get(media_type, media_type)
+    return media_type if media_type in {"photo", "video", "document"} else "photo"
+
+
 def tg_request(token: str, method: str, payload: dict[str, Any]) -> requests.Response:
     url = f"https://api.telegram.org/bot{token}/{method}"
     return requests.post(url, json=payload, timeout=20)
@@ -286,14 +299,15 @@ def send_to_telegram(publication: Publication) -> SendResult:
 
         if len(media) == 1:
             item = media[0]
-            media_type = item.get("type", "photo")
-            method = {"photo": "sendPhoto", "video": "sendVideo", "document": "sendDocument"}.get(media_type, "sendPhoto")
+            media_type = normalize_media_type(item.get("type"))
+            method = {"photo": "sendPhoto", "video": "sendVideo", "document": "sendDocument"}[media_type]
             payload = {
                 **base_payload,
                 media_type: item.get("url"),
-                "caption": post.body_html,
-                "parse_mode": "HTML",
             }
+            if post.body_html:
+                payload["caption"] = post.body_html
+                payload["parse_mode"] = "HTML"
             if keyboard:
                 payload["reply_markup"] = keyboard
             response = tg_request(channel.bot_token, method, payload)
@@ -307,7 +321,7 @@ def send_to_telegram(publication: Publication) -> SendResult:
 
         group = []
         for idx, item in enumerate(media):
-            group_item = {"type": item.get("type", "photo"), "media": item.get("url")}
+            group_item = {"type": normalize_media_type(item.get("type")), "media": item.get("url")}
             if idx == 0 and post.body_html:
                 group_item["caption"] = post.body_html
                 group_item["parse_mode"] = "HTML"
@@ -341,10 +355,15 @@ def send_to_telegram(publication: Publication) -> SendResult:
 def parse_tg_error(response: requests.Response, data: dict[str, Any]) -> SendResult:
     error_text = data.get("description") or response.text
     retry_after = None
+    retryable = True
     params = data.get("parameters") or {}
     if "retry_after" in params:
         retry_after = int(params["retry_after"])
-    return SendResult(ok=False, error=error_text, retry_after_seconds=retry_after)
+    if response.status_code in {400, 401, 403, 404}:
+        retryable = False
+    if response.status_code == 429:
+        retryable = True
+    return SendResult(ok=False, error=error_text, retry_after_seconds=retry_after, retryable=retryable)
 
 
 def run_scheduler(app: Flask) -> None:
@@ -391,7 +410,7 @@ def run_scheduler(app: Flask) -> None:
                 else:
                     refreshed.attempts += 1
                     refreshed.last_error = result.error
-                    if refreshed.attempts >= MAX_ATTEMPTS:
+                    if (not result.retryable) or refreshed.attempts >= MAX_ATTEMPTS:
                         refreshed.status = "failed"
                         refreshed.post.status = "failed"
                         log_action("publication", refreshed.id, "fail", {"error": result.error})
