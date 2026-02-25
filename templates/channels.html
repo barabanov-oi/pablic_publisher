@@ -3,12 +3,13 @@
 <h2>Каналы</h2>
 <form method="post" class="grid-form">
   <input name="title" placeholder="Название" required />
-  <input name="telegram_chat_id" placeholder="Chat ID" required />
+  <input name="telegram_chat_id" placeholder="Chat ID / @username / t.me/link" required />
   <input name="bot_token" placeholder="Bot token" required />
   <input name="daily_time" placeholder="10:00" value="10:00" required />
   <input name="allowed_window_start" placeholder="08:00" value="08:00" required />
   <input name="allowed_window_end" placeholder="22:00" value="22:00" required />
   <button type="submit">Добавить</button>
+  <p>Поддерживаются форматы: <code>-100...</code>, <code>@channel_username</code>, <code>t.me/channel_username</code>.</p>
 </form>
 <table>
   <tr><th>ID</th><th>Название</th><th>Chat ID</th><th>Время слота</th><th>Окно</th></tr>

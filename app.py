@@ -261,6 +261,47 @@ def normalize_media_type(raw_type: str | None) -> str:
     return media_type if media_type in {"photo", "video", "document"} else "photo"
 
 
+def normalize_chat_id(raw_chat_id: str) -> str:
+    value = (raw_chat_id or "").strip()
+    if value.startswith("https://t.me/"):
+        value = value.removeprefix("https://t.me/")
+    if value.startswith("http://t.me/"):
+        value = value.removeprefix("http://t.me/")
+    if value.startswith("t.me/"):
+        value = value.removeprefix("t.me/")
+    if value.startswith("@"):
+        return value
+    if value.lstrip("-").isdigit():
+        return value
+    if re.fullmatch(r"[A-Za-z0-9_]{5,}", value):
+        return f"@{value}"
+    return value
+
+
+def verify_channel_access(bot_token: str, chat_id: str) -> tuple[bool, str]:
+    payload = {"chat_id": chat_id}
+    try:
+        response = tg_request(bot_token, "getChat", payload)
+        data = response.json()
+    except requests.RequestException as exc:
+        return False, f"Сетевая ошибка при проверке канала: {exc}"
+    except ValueError:
+        return False, "Некорректный ответ Telegram при проверке канала"
+
+    if response.ok and data.get("ok"):
+        chat = data.get("result") or {}
+        chat_title = chat.get("title") or chat.get("username") or str(chat.get("id", chat_id))
+        return True, f"OK: доступ подтверждён ({chat_title})"
+
+    description = data.get("description") or response.text or "Unknown error"
+    hint = ""
+    if "chat not found" in description.lower():
+        hint = " Проверьте chat_id/username и что бот добавлен в канал/группу."
+    elif "forbidden" in description.lower():
+        hint = " Проверьте права бота на отправку сообщений."
+    return False, f"Ошибка Telegram: {description}.{hint}".strip()
+
+
 def tg_request(token: str, method: str, payload: dict[str, Any]) -> requests.Response:
     url = f"https://api.telegram.org/bot{token}/{method}"
     return requests.post(url, json=payload, timeout=20)
@@ -276,7 +317,7 @@ def send_to_telegram(publication: Publication) -> SendResult:
     keyboard = build_inline_keyboard(buttons)
 
     base_payload = {
-        "chat_id": channel.telegram_chat_id,
+        "chat_id": normalize_chat_id(channel.telegram_chat_id),
         "disable_notification": bool(options.get("disable_notification", False)),
         "protect_content": bool(options.get("protect_content", False)),
     }
@@ -315,7 +356,7 @@ def send_to_telegram(publication: Publication) -> SendResult:
             if response.ok and response_data.get("ok"):
                 msg_id = str(response_data["result"]["message_id"])
                 if options.get("pin"):
-                    tg_request(channel.bot_token, "pinChatMessage", {"chat_id": channel.telegram_chat_id, "message_id": int(msg_id)})
+                    tg_request(channel.bot_token, "pinChatMessage", {"chat_id": normalize_chat_id(channel.telegram_chat_id), "message_id": int(msg_id)})
                 return SendResult(ok=True, message_id=msg_id)
             return parse_tg_error(response, response_data)
 
@@ -343,7 +384,7 @@ def send_to_telegram(publication: Publication) -> SendResult:
                 first_message_id = str(msg_response.json()["result"]["message_id"])
 
         if options.get("pin"):
-            tg_request(channel.bot_token, "pinChatMessage", {"chat_id": channel.telegram_chat_id, "message_id": int(first_message_id)})
+            tg_request(channel.bot_token, "pinChatMessage", {"chat_id": normalize_chat_id(channel.telegram_chat_id), "message_id": int(first_message_id)})
 
         return SendResult(ok=True, message_id=first_message_id)
     except requests.RequestException as exc:
@@ -443,10 +484,20 @@ def create_app() -> Flask:
     @app.route("/channels", methods=["GET", "POST"])
     def channels():
         if request.method == "POST":
+            raw_chat_id = request.form["telegram_chat_id"]
+            raw_bot_token = request.form["bot_token"]
+            normalized_chat_id = normalize_chat_id(raw_chat_id)
+            bot_token = raw_bot_token.strip()
+
+            is_ok, check_message = verify_channel_access(bot_token, normalized_chat_id)
+            if not is_ok:
+                flash(f"Канал не добавлен. {check_message}")
+                return redirect(url_for("channels"))
+
             channel = Channel(
                 title=request.form["title"],
-                telegram_chat_id=request.form["telegram_chat_id"],
-                bot_token=request.form["bot_token"],
+                telegram_chat_id=normalized_chat_id,
+                bot_token=bot_token,
                 timezone=request.form.get("timezone") or "Europe/Moscow",
                 daily_time=request.form.get("daily_time") or "10:00",
                 allowed_window_start=request.form.get("allowed_window_start") or "08:00",
@@ -454,9 +505,9 @@ def create_app() -> Flask:
             )
             db.session.add(channel)
             db.session.commit()
-            log_action("channel", channel.id, "create")
+            log_action("channel", channel.id, "create", {"check": check_message})
             db.session.commit()
-            flash("Канал добавлен")
+            flash(f"Канал добавлен. {check_message}")
             return redirect(url_for("channels"))
 
         items = Channel.query.order_by(Channel.created_at.desc()).all()
