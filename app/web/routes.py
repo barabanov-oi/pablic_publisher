@@ -196,7 +196,7 @@ def publication_reschedule(pub_id: int):
     publication.last_error = None
     publication.locked_at = None
     publication.locked_by = None
-    publication.post.status = "scheduled"
+    Post.query.filter_by(id=publication.post_id).update({"status": "scheduled"})
     log_action("publication", publication.id, "reschedule", {"planned_at": planned_utc.isoformat()})
     db.session.commit()
     flash("Публикация перепланирована")
@@ -210,7 +210,7 @@ def publication_retry_now(pub_id: int):
     publication.ready_at = now_utc_naive()
     publication.attempts = 0
     publication.last_error = None
-    publication.post.status = "queued"
+    Post.query.filter_by(id=publication.post_id).update({"status": "queued"})
     log_action("publication", publication.id, "retry_now")
     db.session.commit()
     flash("Публикация поставлена на немедленную переотправку")
