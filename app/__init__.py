@@ -1,4 +1,6 @@
 import os
+import logging
+import sys
 
 import click
 from flask import Flask
@@ -12,7 +14,21 @@ from app.worker import run_worker
 from app import models  # noqa: F401
 
 
+def _configure_logging() -> None:
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        return
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    )
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
+
+
 def create_app(config_name: str | None = None) -> Flask:
+    _configure_logging()
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
     env_name = config_name or os.getenv("APP_ENV", "development")
