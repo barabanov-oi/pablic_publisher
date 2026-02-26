@@ -1,10 +1,12 @@
 import csv
 import io
 import json
+import time
 from datetime import datetime
 
 from flask import flash, redirect, render_template, request, url_for
 from sqlalchemy import func
+from sqlalchemy.exc import OperationalError
 
 from app.extensions import db
 from app.models import BlacklistRule, Channel, Post, Publication
@@ -14,6 +16,18 @@ from app.services.telegram_client import normalize_chat_id, verify_channel_acces
 from app.services.validation import validate_post
 from app.utils.timezone import local_to_utc_naive, now_utc_naive, utc_naive_to_local
 from app.web import web_bp
+
+
+def _commit_with_retry(max_attempts: int = 5, delay_seconds: float = 0.2) -> None:
+    for attempt in range(1, max_attempts + 1):
+        try:
+            db.session.commit()
+            return
+        except OperationalError as exc:
+            db.session.rollback()
+            if "database is locked" not in str(exc).lower() or attempt == max_attempts:
+                raise
+            time.sleep(delay_seconds * attempt)
 
 
 @web_bp.route("/")
@@ -44,9 +58,9 @@ def channels():
             allowed_window_end=request.form.get("allowed_window_end") or "22:00",
         )
         db.session.add(channel)
-        db.session.commit()
+        db.session.flush()
         log_action("channel", channel.id, "create", {"check": check_message})
-        db.session.commit()
+        _commit_with_retry()
         flash(f"Канал добавлен. {check_message}")
         return redirect(url_for("channels"))
 
@@ -183,12 +197,14 @@ def publications():
 @web_bp.post("/publications/<int:pub_id>/reschedule")
 def publication_reschedule(pub_id: int):
     publication = db.get_or_404(Publication, pub_id)
+    channel = publication.post.channel
     planned_text = request.form["planned_at"].strip()
     planned_local = datetime.strptime(planned_text, "%Y-%m-%dT%H:%M")
     planned_utc = adjust_to_window(
-        publication.post.channel,
-        local_to_utc_naive(planned_local, publication.post.channel.timezone),
+        channel,
+        local_to_utc_naive(planned_local, channel.timezone),
     )
+    publication.post.status = "scheduled"
     publication.planned_at = planned_utc
     publication.ready_at = planned_utc
     publication.status = "scheduled"
@@ -196,9 +212,8 @@ def publication_reschedule(pub_id: int):
     publication.last_error = None
     publication.locked_at = None
     publication.locked_by = None
-    Post.query.filter_by(id=publication.post_id).update({"status": "scheduled"})
     log_action("publication", publication.id, "reschedule", {"planned_at": planned_utc.isoformat()})
-    db.session.commit()
+    _commit_with_retry()
     flash("Публикация перепланирована")
     return redirect(url_for("publications"))
 
@@ -206,13 +221,15 @@ def publication_reschedule(pub_id: int):
 @web_bp.post("/publications/<int:pub_id>/retry-now")
 def publication_retry_now(pub_id: int):
     publication = db.get_or_404(Publication, pub_id)
+    publication.post.status = "queued"
     publication.status = "retry"
     publication.ready_at = now_utc_naive()
     publication.attempts = 0
     publication.last_error = None
-    Post.query.filter_by(id=publication.post_id).update({"status": "queued"})
+    publication.locked_at = None
+    publication.locked_by = None
     log_action("publication", publication.id, "retry_now")
-    db.session.commit()
+    _commit_with_retry()
     flash("Публикация поставлена на немедленную переотправку")
     return redirect(url_for("publications"))
 
