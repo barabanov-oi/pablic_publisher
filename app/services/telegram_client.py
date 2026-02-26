@@ -99,8 +99,8 @@ class TelegramClient:
         prepared_payload["media"] = self._prepare_media_group(prepared_payload.get("media", []))
         return self._run(self._execute("sendMediaGroup", prepared_payload))
 
-    def pin_message(self, chat_id: str, message_id: int) -> None:
-        self._run(self._execute("pinChatMessage", {"chat_id": chat_id, "message_id": message_id}))
+    def pin_message(self, chat_id: str, message_id: int) -> SendResult:
+        return self._run(self._execute("pinChatMessage", {"chat_id": chat_id, "message_id": message_id}))
 
     def _prepare_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         prepared = {**payload}
