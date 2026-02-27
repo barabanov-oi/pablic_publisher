@@ -1,10 +1,13 @@
 import os
 import logging
+import sqlite3
 import sys
 import threading
 
 import click
 from flask import Flask
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from app.config import CONFIG_MAP, DevelopmentConfig
 from app.extensions import db
@@ -13,6 +16,18 @@ from app.worker import run_worker
 
 # Ensure models are registered for SQLAlchemy metadata.
 from app import models  # noqa: F401
+
+
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record) -> None:  # noqa: ANN001,ARG001
+    if not isinstance(dbapi_connection, sqlite3.Connection):
+        return
+
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    cursor.close()
 
 
 def _configure_logging() -> None:
