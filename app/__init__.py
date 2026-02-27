@@ -5,6 +5,7 @@ import threading
 
 import click
 from flask import Flask
+from sqlalchemy import event
 
 from app.config import CONFIG_MAP, DevelopmentConfig
 from app.extensions import db
@@ -37,6 +38,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.config.from_object(config_class)
 
     db.init_app(app)
+    _configure_sqlite_engine(app)
     app.register_blueprint(web_bp)
 
     _register_endpoint_aliases(app)
@@ -44,6 +46,21 @@ def create_app(config_name: str | None = None) -> Flask:
     _maybe_start_scheduler(app)
 
     return app
+
+
+def _configure_sqlite_engine(app: Flask) -> None:
+    db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if not db_uri.startswith("sqlite"):
+        return
+
+    with app.app_context():
+        @event.listens_for(db.engine, "connect")
+        def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.close()
 
 
 def _should_start_scheduler(app: Flask) -> bool:
