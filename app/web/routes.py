@@ -44,7 +44,7 @@ def channels():
             allowed_window_end=request.form.get("allowed_window_end") or "22:00",
         )
         db.session.add(channel)
-        db.session.commit()
+        db.session.flush()
         log_action("channel", channel.id, "create", {"check": check_message})
         db.session.commit()
         flash(f"Канал добавлен. {check_message}")
@@ -77,7 +77,7 @@ def post_new():
         post.blacklist_check_status = "ok" if ok else "blocked"
         post.blacklist_reason = reason
         db.session.add(post)
-        db.session.commit()
+        db.session.flush()
         log_action("post", post.id, "create")
         db.session.commit()
         flash("Пост сохранён")
@@ -99,7 +99,6 @@ def post_edit(post_id: int):
         ok, reason = validate_post(post)
         post.blacklist_check_status = "ok" if ok else "blocked"
         post.blacklist_reason = reason
-        db.session.commit()
         log_action("post", post.id, "update")
         db.session.commit()
         flash("Пост обновлён")
@@ -122,7 +121,7 @@ def post_duplicate(post_id: int):
         blacklist_reason=src.blacklist_reason,
     )
     db.session.add(copy_post)
-    db.session.commit()
+    db.session.flush()
     log_action("post", copy_post.id, "duplicate", {"source_id": src.id})
     db.session.commit()
     flash("Пост продублирован")
