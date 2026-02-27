@@ -196,18 +196,18 @@ def run_worker(app: Flask) -> None:
     )
 
     while True:
-        try:
-            with app.app_context():
+        with app.app_context():
+            try:
                 recover_stuck_publications(app, worker_id)
                 pub_ids = _claim_due_publication_ids(worker_id, batch_size, max_attempts)
                 logger.info("[worker] Захвачено задач: worker_id=%s count=%s", worker_id, len(pub_ids))
 
                 for pub_id in pub_ids:
                     _process_publication(pub_id, max_attempts, default_retry_minutes)
-        except Exception as exc:  # noqa: BLE001
-            db.session.rollback()
-            logger.exception("[worker] Критическая ошибка итерации worker_id=%s: %s", worker_id, exc)
-        finally:
-            db.session.remove()
+            except Exception as exc:  # noqa: BLE001
+                db.session.rollback()
+                logger.exception("[worker] Критическая ошибка итерации worker_id=%s: %s", worker_id, exc)
+            finally:
+                db.session.remove()
 
         time.sleep(interval)
