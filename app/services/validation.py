@@ -2,6 +2,7 @@ import re
 from html.parser import HTMLParser
 from urllib.parse import urlparse
 
+from app.extensions import db
 from app.models import BlacklistRule, Post
 from app.services.json_fields import JsonFieldError, parse_post_payload
 
@@ -34,7 +35,8 @@ def validate_post(post: Post) -> tuple[bool, str | None]:
     parser = LinkExtractor()
     parser.feed(post.body_html or "")
 
-    rules = BlacklistRule.query.filter_by(is_enabled=True).all()
+    with db.session.no_autoflush:
+        rules = BlacklistRule.query.filter_by(is_enabled=True).all()
     text_lower = (post.body_html or "").lower()
 
     for href in parser.links:
