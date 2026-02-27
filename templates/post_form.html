@@ -1,19 +1,40 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>{% if post %}Редактирование{% else %}Новый пост{% endif %}</h2>
-<form method="post" class="long-form">
-  <label>Канал
-    <select name="channel_id" required>
-      {% for c in channels %}
-        <option value="{{ c.id }}" {% if post and post.channel_id == c.id %}selected{% endif %}>{{ c.title }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>Заголовок <input name="title" value="{{ post.title if post else '' }}" required /></label>
-  <label>HTML текст <textarea name="body_html" rows="8">{{ post.body_html if post else '' }}</textarea></label>
-  <label>Media JSON (массив объектов type/url) <textarea name="media" rows="4">{{ post.media if post else '[]' }}</textarea></label>
-  <label>Buttons JSON (массив text/url) <textarea name="buttons" rows="4">{{ post.buttons if post else '[]' }}</textarea></label>
-  <label>Options JSON <textarea name="options" rows="4">{{ post.options if post else '{"disable_notification": false, "pin": false, "protect_content": false, "disable_preview": false}' }}</textarea></label>
-  <button type="submit">Сохранить как черновик</button>
-</form>
+<h2 class="h3 mb-3">{% if post %}Редактирование{% else %}Новый пост{% endif %}</h2>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <form method="post" class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Канал</label>
+        <select class="form-select" name="channel_id" required>
+          {% for c in channels %}
+            <option value="{{ c.id }}" {% if post and post.channel_id == c.id %}selected{% endif %}>{{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Заголовок</label>
+        <input class="form-control" name="title" value="{{ post.title if post else '' }}" required />
+      </div>
+      <div class="col-12">
+        <label class="form-label">HTML текст</label>
+        <textarea class="form-control" name="body_html" rows="8">{{ post.body_html if post else '' }}</textarea>
+      </div>
+      <div class="col-12 col-xl-4">
+        <label class="form-label">Media JSON (массив type/url)</label>
+        <textarea class="form-control" name="media" rows="6">{{ post.media if post else '[]' }}</textarea>
+      </div>
+      <div class="col-12 col-xl-4">
+        <label class="form-label">Buttons JSON (массив text/url)</label>
+        <textarea class="form-control" name="buttons" rows="6">{{ post.buttons if post else '[]' }}</textarea>
+      </div>
+      <div class="col-12 col-xl-4">
+        <label class="form-label">Options JSON</label>
+        <textarea class="form-control" name="options" rows="6">{{ post.options if post else '{"disable_notification": false, "pin": false, "protect_content": false, "disable_preview": false}' }}</textarea>
+      </div>
+      <div class="col-12"><button type="submit" class="btn btn-primary px-4">Сохранить как черновик</button></div>
+    </form>
+  </div>
+</div>
 {% endblock %}

@@ -1,10 +1,29 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Админка автопостинга</h2>
-<p>Сервис поддерживает черновики, расписание, ретраи, blacklist и отчёты.</p>
-<ul>
-  <li>Планировщик запускается в фоне каждые 20 секунд.</li>
-  <li>Ошибки отправки ретраятся до 5 раз с шагом +30 минут.</li>
-  <li>Пропущенные публикации (ready_at &lt;= now) догоняются автоматически.</li>
-</ul>
+<section class="hero-card p-4 p-lg-5 mb-4">
+  <h1 class="display-6 fw-semibold mb-3">Админка автопостинга</h1>
+  <p class="lead text-secondary mb-4">Управляйте публикациями, расписанием и качеством контента в едином интерфейсе.</p>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="info-chip">Планировщик работает каждые 20 секунд</div>
+    </div>
+    <div class="col-md-4">
+      <div class="info-chip">До 5 ретраев с шагом +30 минут</div>
+    </div>
+    <div class="col-md-4">
+      <div class="info-chip">Автодогон пропущенных публикаций</div>
+    </div>
+  </div>
+</section>
+
+<section class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <h2 class="h4 mb-3">Что доступно</h2>
+    <ul class="text-secondary mb-0">
+      <li>Черновики, расписание и ручное управление отправкой.</li>
+      <li>Проверка контента через blacklist и валидации.</li>
+      <li>Отчёты план/факт и аналитика по ошибкам.</li>
+    </ul>
+  </div>
+</section>
 {% endblock %}

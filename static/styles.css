@@ -1,17 +1,57 @@
-body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
-header { background: #1f2937; color: #fff; padding: 12px 20px; }
-nav a { color: #fff; margin-right: 12px; text-decoration: none; }
-main { padding: 20px; }
-table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 20px; }
-th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
-.grid-form { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.long-form label { display: block; margin-bottom: 12px; }
-input, textarea, select, button { padding: 8px; }
-.inline { display: inline-block; margin: 2px; }
-.flash-list { background: #dcfce7; padding: 10px; list-style: none; }
-.badge { padding: 2px 6px; border-radius: 12px; font-size: 12px; color: #fff; }
-.status-draft { background: #6b7280; }
-.status-scheduled, .status-retry { background: #2563eb; }
-.status-processing, .status-queued { background: #9333ea; }
-.status-sent { background: #16a34a; }
-.status-failed, .status-canceled { background: #dc2626; }
+:root {
+  --app-bg: #f4f8ff;
+  --app-surface: #ffffff;
+  --app-border: #e8eef8;
+  --app-primary: #3a70ff;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(circle at top right, #edf3ff, var(--app-bg) 40%);
+  color: #12223b;
+}
+
+.navbar {
+  backdrop-filter: blur(8px);
+}
+
+.hero-card {
+  background: linear-gradient(140deg, #ffffff, #f6f9ff);
+  border: 1px solid var(--app-border);
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 35px rgba(32, 65, 138, 0.08);
+}
+
+.info-chip {
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  color: #3d5074;
+  font-weight: 500;
+}
+
+.card,
+.table,
+.form-control,
+.form-select,
+.btn {
+  border-radius: 0.9rem !important;
+}
+
+.table thead th {
+  font-weight: 600;
+  color: #48618a;
+}
+
+.badge {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.status-draft { background: #9ca3af; }
+.status-scheduled, .status-retry { background: #0d6efd; }
+.status-processing, .status-queued { background: #7e57c2; }
+.status-sent { background: #21a366; }
+.status-failed, .status-canceled { background: #ef5350; }

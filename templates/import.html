@@ -1,15 +1,20 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Импорт из CSV</h2>
-<form method="post" enctype="multipart/form-data" class="long-form">
-  <label>Режим
-    <select name="mode">
-      <option value="draft">Создать черновики</option>
-      <option value="scheduled">Сразу запланировать</option>
-    </select>
-  </label>
-  <input type="file" name="file" accept=".csv" required>
-  <button type="submit">Импортировать</button>
-</form>
-<p>Поля CSV: channel_id/channel_title,title,body_html,media_urls,buttons,planned_at</p>
+<h2 class="h3 mb-3">Импорт из CSV</h2>
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body p-4">
+    <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Режим</label>
+        <select class="form-select" name="mode">
+          <option value="draft">Создать черновики</option>
+          <option value="scheduled">Сразу запланировать</option>
+        </select>
+      </div>
+      <div class="col-md-5"><label class="form-label">CSV файл</label><input class="form-control" type="file" name="file" accept=".csv" required></div>
+      <div class="col-md-3"><button type="submit" class="btn btn-primary w-100">Импортировать</button></div>
+    </form>
+    <p class="mt-3 mb-0 text-secondary">Поля CSV: <code>channel_id/channel_title,title,body_html,media_urls,buttons,planned_at</code></p>
+  </div>
+</div>
 {% endblock %}

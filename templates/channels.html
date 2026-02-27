@@ -1,26 +1,42 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Каналы</h2>
-<form method="post" class="grid-form">
-  <input name="title" placeholder="Название" required />
-  <input name="telegram_chat_id" placeholder="Chat ID / @username / t.me/link" required />
-  <input name="bot_token" placeholder="Bot token" required />
-  <input name="daily_time" placeholder="10:00" value="10:00" required />
-  <input name="allowed_window_start" placeholder="08:00" value="08:00" required />
-  <input name="allowed_window_end" placeholder="22:00" value="22:00" required />
-  <button type="submit">Добавить</button>
-  <p>Поддерживаются форматы: <code>-100...</code>, <code>@channel_username</code>, <code>t.me/channel_username</code>.</p>
-</form>
-<table>
-  <tr><th>ID</th><th>Название</th><th>Chat ID</th><th>Время слота</th><th>Окно</th></tr>
-  {% for c in channels %}
-    <tr>
-      <td>{{ c.id }}</td>
-      <td>{{ c.title }}</td>
-      <td>{{ c.telegram_chat_id }}</td>
-      <td>{{ c.daily_time }}</td>
-      <td>{{ c.allowed_window_start }} - {{ c.allowed_window_end }}</td>
-    </tr>
-  {% endfor %}
-</table>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h3 mb-0">Каналы</h2>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <form method="post" class="row g-3">
+      <div class="col-md-6 col-xl-4"><input class="form-control" name="title" placeholder="Название" required /></div>
+      <div class="col-md-6 col-xl-4"><input class="form-control" name="telegram_chat_id" placeholder="Chat ID / @username / t.me/link" required /></div>
+      <div class="col-md-6 col-xl-4"><input class="form-control" name="bot_token" placeholder="Bot token" required /></div>
+      <div class="col-md-4"><input class="form-control" name="daily_time" placeholder="10:00" value="10:00" required /></div>
+      <div class="col-md-4"><input class="form-control" name="allowed_window_start" placeholder="08:00" value="08:00" required /></div>
+      <div class="col-md-4"><input class="form-control" name="allowed_window_end" placeholder="22:00" value="22:00" required /></div>
+      <div class="col-12 d-flex flex-column flex-md-row gap-3 align-items-md-center">
+        <button type="submit" class="btn btn-primary px-4">Добавить канал</button>
+        <small class="text-secondary">Поддерживаются форматы: <code>-100...</code>, <code>@channel_username</code>, <code>t.me/channel_username</code>.</small>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th>ID</th><th>Название</th><th>Chat ID</th><th>Время слота</th><th>Окно</th></tr></thead>
+      <tbody>
+      {% for c in channels %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.title }}</td>
+          <td>{{ c.telegram_chat_id }}</td>
+          <td>{{ c.daily_time }}</td>
+          <td>{{ c.allowed_window_start }} - {{ c.allowed_window_end }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
