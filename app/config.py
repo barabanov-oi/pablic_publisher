@@ -10,6 +10,7 @@ class BaseConfig:
     DEFAULT_RETRY_MINUTES = int(os.getenv("DEFAULT_RETRY_MINUTES", "30"))
     WORKER_INTERVAL_SECONDS = int(os.getenv("WORKER_INTERVAL_SECONDS", "20"))
     PROCESSING_TTL_SECONDS = int(os.getenv("PROCESSING_TTL_SECONDS", "900"))
+    DISABLE_SCHEDULER = os.getenv("DISABLE_SCHEDULER", "0") == "1"
 
 
 class DevelopmentConfig(BaseConfig):

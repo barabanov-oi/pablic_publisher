@@ -1,6 +1,7 @@
 import os
 import logging
 import sys
+import threading
 
 import click
 from flask import Flask
@@ -40,8 +41,32 @@ def create_app(config_name: str | None = None) -> Flask:
 
     _register_endpoint_aliases(app)
     _register_cli_commands(app)
+    _maybe_start_scheduler(app)
 
     return app
+
+
+def _should_start_scheduler(app: Flask) -> bool:
+    if app.testing or app.config.get("DISABLE_SCHEDULER", False):
+        return False
+
+    if os.getenv("FLASK_RUN_FROM_CLI") == "true":
+        return False
+
+    if app.debug:
+        return os.getenv("WERKZEUG_RUN_MAIN") == "true"
+
+    return True
+
+
+def _maybe_start_scheduler(app: Flask) -> None:
+    if not _should_start_scheduler(app):
+        logging.getLogger(__name__).info("[worker] Автозапуск воркера отключён")
+        return
+
+    worker_thread = threading.Thread(target=run_worker, args=(app,), daemon=True, name="publisher-worker")
+    worker_thread.start()
+    logging.getLogger(__name__).info("[worker] Воркер запущен в фоне: thread=%s", worker_thread.name)
 
 
 def _register_endpoint_aliases(app: Flask) -> None:
